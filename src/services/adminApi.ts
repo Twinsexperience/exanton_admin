@@ -1,7 +1,15 @@
-const API_BASE =
+function normalizeApiBase(raw: string): string {
+  const trimmed = raw.replace(/\/+$/, "");
+  if (!trimmed) return "/api";
+  return trimmed.endsWith("/api") ? trimmed : `${trimmed}/api`;
+}
+
+const RAW_API_URL =
   (import.meta as unknown as { env?: { VITE_API_URL?: string } }).env
     ?.VITE_API_URL ??
   `${window.location.protocol}//${window.location.hostname}:4000/api`;
+
+const API_BASE = normalizeApiBase(RAW_API_URL);
 
 const ADMIN_TOKEN_KEY = "nexloc_warden_admin_token";
 
