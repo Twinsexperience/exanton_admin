@@ -33,7 +33,7 @@ export const AdminFleetMap: React.FC<AdminFleetMapProps> = ({
     );
     const center: [number, number] = first
       ? [first.lastLat!, first.lastLon!]
-      : [-34.603722, -58.381592];
+      : [18.3808, -65.9574];
 
     const map = L.map(mapDivRef.current, {
       zoomControl: false,
