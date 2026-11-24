@@ -42,10 +42,9 @@ export const AdminFleetMap: React.FC<AdminFleetMapProps> = ({
 
     L.control.zoom({ position: "topright" }).addTo(map);
 
-    // Tiles CartoDB Dark Matter @2x (512px HD siempre para cualquier pantalla, sin API key)
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png", {
-      subdomains: "abcd",
-      maxZoom: 20,
+    // Tiles OpenStreetMap con filtro dark táctico en CSS (sin API key requerida)
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
     }).addTo(map);
 
     heatLayerRef.current = L.layerGroup().addTo(map);

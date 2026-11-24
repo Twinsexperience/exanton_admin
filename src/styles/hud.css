@@ -18,7 +18,7 @@
 }
 
 .soc-fullscreen-map .leaflet-tile-pane {
-  filter: contrast(1.06) brightness(1.06);
+  filter: invert(100%) hue-rotate(180deg) brightness(92%) contrast(92%) saturate(75%);
 }
 
 /* Top Floating HUD */
