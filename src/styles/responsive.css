@@ -1,0 +1,147 @@
+﻿/* Responsive */
+@media (max-width: 1080px) {
+  .hud-kpis {
+    display: none;
+  }
+  .dash-panels-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 780px) {
+  .hamburger-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .hud-heat-btn {
+    display: none;
+  }
+  .soc-hud-top {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    height: 54px;
+    padding: 0 8px;
+    gap: 6px;
+  }
+  .hud-left {
+    min-width: 0;
+    gap: 6px;
+  }
+  .hud-right {
+    flex-shrink: 0;
+    gap: 5px;
+  }
+  .logo-frame.small {
+    width: 28px;
+    height: 28px;
+  }
+  .hud-brand {
+    gap: 6px;
+    min-width: 0;
+  }
+  .hud-brand strong {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .hud-live {
+    font-size: 9px;
+    white-space: nowrap;
+  }
+  .hud-right .btn-sm {
+    padding: 5px 8px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .soc-rail {
+    top: 72px;
+    bottom: auto;
+    max-height: calc(100dvh - 84px);
+    overflow-y: auto;
+    left: -88px;
+    width: 66px;
+    padding: 8px 5px;
+    gap: 7px;
+    border-radius: 13px;
+    transition: left 0.2s ease;
+  }
+  .soc-rail.open {
+    left: 10px;
+  }
+  .rail-nav {
+    gap: 3px;
+  }
+  .rail-btn {
+    padding: 7px 3px;
+    font-size: 10.5px;
+    gap: 3px;
+    border-radius: 9px;
+  }
+  .rail-btn svg {
+    width: 17px;
+    height: 17px;
+  }
+  .rail-footer {
+    padding-top: 6px;
+    gap: 6px;
+  }
+  .rail-avatar,
+  .rail-logout {
+    width: 32px;
+    height: 32px;
+    font-size: 11px;
+    border-radius: 8px;
+  }
+  .soc-dock-right {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    width: auto;
+    top: auto;
+    max-height: 36dvh;
+    padding: 12px 14px;
+    gap: 10px;
+  }
+  .soc-overlay-panel {
+    top: 72px;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+  }
+  .search-box {
+    display: none;
+  }
+}
+
+.soc-restore-ui-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 45;
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+}
+
+.soc-viewport {
+  height: 100vh;
+  height: 100dvh;
+}
+
+.soc-fullscreen-map .leaflet-top.leaflet-right {
+  top: 74px;
+  right: 6px;
+}
+
+@media (max-width: 780px) {
+  .soc-fullscreen-map .leaflet-top.leaflet-right {
+    top: 68px;
+    right: 4px;
+  }
+  .field input,
+  .select-input {
+    font-size: 16px;
+    min-height: 44px;
+  }
+}

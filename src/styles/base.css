@@ -1,0 +1,208 @@
+﻿:root {
+  --bg-obsidian: #05060a;
+  --glass-bg: rgba(10, 12, 20, 0.78);
+  --glass-bg-strong: rgba(10, 12, 20, 0.9);
+  --border-glass: rgba(255, 255, 255, 0.11);
+  --border-red: rgba(255, 30, 60, 0.45);
+  --border-violet: rgba(139, 92, 246, 0.45);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --gradient-warden: linear-gradient(135deg, #ff1e3c 0%, #8b5cf6 100%);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+  background: var(--bg-obsidian);
+  color: var(--text-primary);
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+.mono {
+  font-family: "JetBrains Mono", Consolas, monospace;
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+/* Login */
+.center-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 30, 60, 0.11), transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.12), transparent 40%);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 410px;
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--border-glass);
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+}
+
+.brand-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.brand-header h1 {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+}
+
+.logo-frame {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #ffffff;
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+.logo-frame.small {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+}
+
+.logo-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.owner-badge {
+  display: inline-block;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.7px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255, 30, 60, 0.16);
+  color: #ff6b7f;
+  border: 1px solid var(--border-red);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.field input,
+.select-input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  background: rgba(5, 6, 10, 0.85);
+  border: 1px solid var(--border-glass);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text-primary);
+  font-size: 13.5px;
+  outline: none;
+}
+
+.field input:-webkit-autofill,
+.field input:-webkit-autofill:hover,
+.field input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-primary);
+  -webkit-box-shadow: 0 0 0 1000px #090b12 inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+}
+
+.btn-sm {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.btn-primary {
+  background: var(--gradient-warden);
+  color: #ffffff;
+}
+
+.btn-glass {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  border: 1px solid var(--border-glass);
+}
+
+.btn-glass:hover {
+  border-color: var(--border-violet);
+}
+
+.btn-ghost-danger {
+  background: rgba(255, 30, 60, 0.12);
+  color: #ff8091;
+  border: 1px solid rgba(255, 30, 60, 0.35);
+}
+
+.link-btn {
+  background: transparent;
+  border: none;
+  color: #a78bfa;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(5, 6, 10, 0.72);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
