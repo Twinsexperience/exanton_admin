@@ -556,6 +556,26 @@ export async function deleteHardwareDevice(id: string) {
   });
 }
 
+export async function linkGpsToUser(payload: {
+  userId: string;
+  imei: string;
+  alias: string;
+  plate: string;
+  gpsModel?: string;
+  serviceTier?: AdminVehicleItem["serviceTier"];
+}) {
+  return request<{ vehicle: AdminVehicleItem }>("/admin/vehicles/link", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function unlinkAdminVehicle(vehicleId: string) {
+  return request<{ deleted: boolean }>(`/admin/vehicles/${vehicleId}`, {
+    method: "DELETE",
+  });
+}
+
 export async function updateLead(
   id: string,
   payload: { status?: LeadItem["status"]; adminNotes?: string }

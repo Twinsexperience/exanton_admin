@@ -1,15 +1,21 @@
 import React, { useState } from "react";
 import {
   AdminHealthStatus,
+  AdminUser,
+  AdminVehicleItem,
   HardwareDeviceItem,
   createHardwareDevice,
   deleteHardwareDevice,
   importHardwareDevices,
+  linkGpsToUser,
   sendBatchCommand,
+  unlinkAdminVehicle,
 } from "../../services/adminApi";
 
 interface HardwarePanelProps {
   items: HardwareDeviceItem[];
+  users: AdminUser[];
+  vehicles: AdminVehicleItem[];
   health: AdminHealthStatus | null;
   onRefresh: () => Promise<void>;
   onNotify: (msg: string) => void;
@@ -18,6 +24,8 @@ interface HardwarePanelProps {
 
 export const HardwarePanel: React.FC<HardwarePanelProps> = ({
   items,
+  users,
+  vehicles,
   health,
   onRefresh,
   onNotify,
@@ -31,6 +39,45 @@ export const HardwarePanel: React.FC<HardwarePanelProps> = ({
   const [bulkText, setBulkText] = useState("");
   const [batchCmd, setBatchCmd] = useState("B");
   const [selectedImeis, setSelectedImeis] = useState<string[]>([]);
+
+  // Vincular GPS a Cliente / Vehículo
+  const [linkUserId, setLinkUserId] = useState(users[0]?.id ?? "");
+  const [linkImei, setLinkImei] = useState("");
+  const [linkAlias, setLinkAlias] = useState("");
+  const [linkPlate, setLinkPlate] = useState("");
+  const [linkModel, setLinkModel] = useState("COBAN_TK103");
+  const [linkTier, setLinkTier] =
+    useState<AdminVehicleItem["serviceTier"]>("PLUS_SCORING");
+  const [linking, setLinking] = useState(false);
+
+  const handleLinkGps = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const targetUserId = linkUserId || users[0]?.id;
+    if (!targetUserId) {
+      onError("Seleccioná un cliente para vincular el GPS.");
+      return;
+    }
+    setLinking(true);
+    try {
+      await linkGpsToUser({
+        userId: targetUserId,
+        imei: linkImei.trim(),
+        alias: linkAlias.trim(),
+        plate: linkPlate.trim(),
+        gpsModel: linkModel,
+        serviceTier: linkTier,
+      });
+      setLinkImei("");
+      setLinkAlias("");
+      setLinkPlate("");
+      onNotify("GPS vinculado al cliente exitosamente.");
+      await onRefresh();
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "Error vinculando GPS");
+    } finally {
+      setLinking(false);
+    }
+  };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,6 +212,137 @@ export const HardwarePanel: React.FC<HardwarePanelProps> = ({
           )}
         </div>
       )}
+
+      <div className="glass-card" id="link-gps-card">
+        <h3>Vincular GPS a Cliente / Vehículo</h3>
+        <p className="sub" style={{ marginBottom: 12 }}>
+          Asigná un rastreador del inventario (o un IMEI nuevo) directamente a
+          la cuenta de un cliente.
+        </p>
+        <form
+          className="login-form"
+          style={{ gap: 10 }}
+          onSubmit={handleLinkGps}
+        >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+              gap: 10,
+            }}
+          >
+            <div className="field">
+              <label>Cliente</label>
+              <select
+                className="select-input"
+                value={linkUserId || users[0]?.id || ""}
+                onChange={(e) => setLinkUserId(e.target.value)}
+                required
+              >
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.fullName} ({u.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Desde Inventario (opcional)</label>
+              <select
+                className="select-input"
+                value=""
+                onChange={(e) => {
+                  const found = items.find((it) => it.imei === e.target.value);
+                  if (found) {
+                    setLinkImei(found.imei);
+                    setLinkModel(found.gpsModel);
+                  }
+                }}
+              >
+                <option value="">-- Elegir GPS en STOCK --</option>
+                {items
+                  .filter((it) => it.simStatus === "STOCK")
+                  .map((it) => (
+                    <option key={it.id} value={it.imei}>
+                      {it.imei} ({it.gpsModel})
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>IMEI (15 dígitos)</label>
+              <input
+                type="text"
+                maxLength={15}
+                pattern="\d{15}"
+                placeholder="860123456789012"
+                value={linkImei}
+                onChange={(e) => setLinkImei(e.target.value)}
+                required
+              />
+            </div>
+            <div className="field">
+              <label>Alias de la Unidad</label>
+              <input
+                type="text"
+                placeholder="Ej. Hilux Reparto #01"
+                value={linkAlias}
+                onChange={(e) => setLinkAlias(e.target.value)}
+                required
+              />
+            </div>
+            <div className="field">
+              <label>Tablilla / Patente</label>
+              <input
+                type="text"
+                placeholder="Ej. JKL-402"
+                value={linkPlate}
+                onChange={(e) => setLinkPlate(e.target.value)}
+                required
+              />
+            </div>
+            <div className="field">
+              <label>Modelo GPS</label>
+              <select
+                className="select-input"
+                value={linkModel}
+                onChange={(e) => setLinkModel(e.target.value)}
+              >
+                <option value="COBAN_TK103">Coban TK103</option>
+                <option value="COBAN_TK303">Coban TK303</option>
+                <option value="CONCOX_GT06">Concox GT06</option>
+                <option value="TELTONIKA_FMC130">Teltonika FMC130</option>
+                <option value="OBD_PRO">OBD-II Pro</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Paquete de Servicio</label>
+              <select
+                className="select-input"
+                value={linkTier}
+                onChange={(e) =>
+                  setLinkTier(
+                    e.target.value as AdminVehicleItem["serviceTier"]
+                  )
+                }
+              >
+                <option value="TRACKING_ONLY">Solo Rastreo</option>
+                <option value="PLUS_SCORING">Plus (Scoring + Geocercas)</option>
+                <option value="FULL_STATUS">Full Status (OBD-II)</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <button
+              type="submit"
+              className="btn btn-primary btn-sm"
+              disabled={linking || users.length === 0}
+            >
+              {linking ? "Vinculando..." : "Vincular GPS al Cliente"}
+            </button>
+          </div>
+        </form>
+      </div>
 
       <div className="dash-panels-2">
         <div className="glass-card">
@@ -316,22 +494,99 @@ export const HardwarePanel: React.FC<HardwarePanelProps> = ({
                     <span className="status-pill active">{item.simStatus}</span>
                   </td>
                   <td>
+                    <div className="row-actions">
+                      {item.simStatus === "STOCK" && (
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          onClick={() => {
+                            setLinkImei(item.imei);
+                            setLinkModel(item.gpsModel);
+                            document
+                              .getElementById("link-gps-card")
+                              ?.scrollIntoView({ behavior: "smooth" });
+                          }}
+                        >
+                          Vincular
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="btn btn-ghost-danger btn-sm"
+                        onClick={async () => {
+                          try {
+                            await deleteHardwareDevice(item.id);
+                            onNotify("Equipo eliminado del inventario.");
+                            await onRefresh();
+                          } catch (err) {
+                            onError(
+                              err instanceof Error
+                                ? err.message
+                                : "Error eliminando"
+                            );
+                          }
+                        }}
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Unidades Vinculadas */}
+      <div className="glass-card table-wrap">
+        <div className="card-head">
+          <h3>Unidades GPS Vinculadas ({vehicles.length})</h3>
+        </div>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Unidad / Tablilla</th>
+              <th>IMEI</th>
+              <th>Cliente</th>
+              <th>Modelo / Paquete</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {vehicles.map((v) => {
+              const owner = users.find((u) => u.id === v.userId);
+              return (
+                <tr key={v.id}>
+                  <td>
+                    <strong>{v.alias}</strong> ({v.plate})
+                  </td>
+                  <td className="mono">{v.imei}</td>
+                  <td className="mono">
+                    {owner ? `${owner.fullName} (${owner.email})` : v.userId}
+                  </td>
+                  <td className="mono">
+                    {v.gpsModel} &bull; {v.serviceTier}
+                  </td>
+                  <td>
                     <button
                       type="button"
                       className="btn btn-ghost-danger btn-sm"
                       onClick={async () => {
                         try {
-                          await deleteHardwareDevice(item.id);
-                          onNotify("Equipo eliminado del inventario.");
+                          await unlinkAdminVehicle(v.id);
+                          onNotify(`Unidad ${v.alias} desvinculada.`);
                           await onRefresh();
                         } catch (err) {
                           onError(
-                            err instanceof Error ? err.message : "Error eliminando"
+                            err instanceof Error
+                              ? err.message
+                              : "Error desvinculando"
                           );
                         }
                       }}
                     >
-                      Eliminar
+                      Desvincular
                     </button>
                   </td>
                 </tr>

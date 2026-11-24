@@ -1,4 +1,4 @@
-﻿/* Responsive */
+/* Responsive */
 @media (max-width: 1080px) {
   .hud-kpis {
     display: none;
@@ -132,6 +132,31 @@
 .soc-fullscreen-map .leaflet-top.leaflet-right {
   top: 74px;
   right: 6px;
+}
+
+@media (max-height: 760px) {
+  .soc-rail {
+    top: 76px;
+    bottom: 10px;
+    padding: 8px 6px;
+    gap: 6px;
+  }
+  .rail-nav {
+    gap: 2px;
+  }
+  .rail-btn {
+    padding: 6px 4px;
+    font-size: 10px;
+    gap: 2px;
+  }
+  .rail-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+  .rail-footer {
+    gap: 6px;
+    padding-top: 6px;
+  }
 }
 
 @media (max-width: 780px) {

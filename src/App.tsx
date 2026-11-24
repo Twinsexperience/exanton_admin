@@ -861,6 +861,8 @@ export const App: React.FC = () => {
             {tab === "hardware" && (
               <HardwarePanel
                 items={hardwareItems}
+                users={users}
+                vehicles={vehicles}
                 health={health}
                 onRefresh={loadAll}
                 onNotify={notify}
