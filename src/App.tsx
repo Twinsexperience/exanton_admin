@@ -4,9 +4,11 @@ import { AdminLogin } from "./components/AdminLogin";
 import { SocCommand, SocDockPanel } from "./components/SocDockPanel";
 import { AuditPanel } from "./components/panels/AuditPanel";
 import { DocumentsPanel } from "./components/panels/DocumentsPanel";
+import { HardwarePanel } from "./components/panels/HardwarePanel";
 import { IncidentsPanel } from "./components/panels/IncidentsPanel";
 import { LeadsPanel } from "./components/panels/LeadsPanel";
 import { MetricsPanel } from "./components/panels/MetricsPanel";
+import { PlatformPanel } from "./components/panels/PlatformPanel";
 import { UsersPanel } from "./components/panels/UsersPanel";
 import {
   IconDashboard,
@@ -21,24 +23,33 @@ import {
 } from "./components/Icons";
 import {
   AdminDocument,
+  AdminHealthStatus,
   AdminUser,
   AdminVehicleItem,
   AuditLogItem,
+  HardwareDeviceItem,
   HeatmapPoint,
   IncidentItem,
   LeadItem,
+  PlanCatalogItem,
+  PlatformBroadcastItem,
   fetchAdminAuditLogs,
   fetchAdminDocuments,
+  fetchAdminHealth,
   fetchAdminHeatmap,
   fetchAdminIncidents,
   fetchAdminLeads,
   fetchAdminSession,
   fetchAdminUsers,
   fetchAdminVehicles,
+  fetchBroadcasts,
+  fetchHardwareDevices,
+  fetchPlanCatalog,
   reverseGeocodeAdmin,
   reviewDocument,
   sendAdminVehicleCommand,
   setAdminToken,
+  subscribeAdminStream,
   updateAdminIncident,
   updateUserOnboardingStatus,
   updateUserPlan,
@@ -48,9 +59,11 @@ type AdminTab =
   | "soc"
   | "incidents"
   | "metrics"
+  | "hardware"
   | "documents"
   | "users"
   | "leads"
+  | "platform"
   | "audit";
 
 function getInitials(name: string): string {
@@ -60,6 +73,30 @@ function getInitials(name: string): string {
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase() ?? "")
     .join("");
+}
+
+function playCriticalAlertBeep(): void {
+  try {
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(660, ctx.currentTime + 0.14);
+    gain.gain.setValueAtTime(0.09, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.32);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.34);
+  } catch {
+    // AudioContext may be blocked before user interaction
+  }
 }
 
 export const App: React.FC = () => {
@@ -82,6 +119,11 @@ export const App: React.FC = () => {
   const [incidents, setIncidents] = useState<IncidentItem[]>([]);
   const [heatmapPoints, setHeatmapPoints] = useState<HeatmapPoint[]>([]);
   const [showHeatmap, setShowHeatmap] = useState(false);
+
+  const [health, setHealth] = useState<AdminHealthStatus | null>(null);
+  const [hardwareItems, setHardwareItems] = useState<HardwareDeviceItem[]>([]);
+  const [planCatalog, setPlanCatalog] = useState<PlanCatalogItem[]>([]);
+  const [broadcasts, setBroadcasts] = useState<PlatformBroadcastItem[]>([]);
 
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
   const [selectedAddress, setSelectedAddress] = useState<string>("");
@@ -112,27 +154,44 @@ export const App: React.FC = () => {
     if (!owner) return;
     try {
       setDataErr(null);
-      const [docsRes, usersRes, leadsRes, auditRes, vehRes, incRes, heatRes] =
-        await Promise.all([
-          fetchAdminDocuments(statusFilter === "ALL" ? undefined : statusFilter),
-          fetchAdminUsers(),
-          fetchAdminLeads(),
-          fetchAdminAuditLogs(),
-          fetchAdminVehicles().catch(() => ({ vehicles: [] })),
-          fetchAdminIncidents().catch(() => ({ incidents: [] })),
-          showHeatmap
-            ? fetchAdminHeatmap(24).catch(() => ({ points: [] }))
-            : Promise.resolve({ points: [] }),
-        ]);
+      const [
+        docsRes,
+        usersRes,
+        leadsRes,
+        auditRes,
+        vehRes,
+        incRes,
+        heatRes,
+        healthRes,
+        hwRes,
+        plansRes,
+        bcRes,
+      ] = await Promise.all([
+        fetchAdminDocuments(statusFilter === "ALL" ? undefined : statusFilter),
+        fetchAdminUsers(),
+        fetchAdminLeads(),
+        fetchAdminAuditLogs(),
+        fetchAdminVehicles().catch(() => ({ vehicles: [] })),
+        fetchAdminIncidents().catch(() => ({ incidents: [] })),
+        showHeatmap
+          ? fetchAdminHeatmap(24).catch(() => ({ points: [] }))
+          : Promise.resolve({ points: [] }),
+        fetchAdminHealth().catch(() => null),
+        fetchHardwareDevices().catch(() => ({ items: [] })),
+        fetchPlanCatalog().catch(() => ({ plans: [] })),
+        fetchBroadcasts().catch(() => ({ broadcasts: [] })),
+      ]);
       setDocs(docsRes.documents);
       setUsers(usersRes.users);
       setLeads(leadsRes.leads);
       setAuditLogs(auditRes.logs);
       setVehicles(vehRes.vehicles);
       setIncidents(incRes.incidents);
-      if (showHeatmap) {
-        setHeatmapPoints(heatRes.points);
-      }
+      if (showHeatmap) setHeatmapPoints(heatRes.points);
+      if (healthRes) setHealth(healthRes);
+      setHardwareItems(hwRes.items);
+      setPlanCatalog(plansRes.plans);
+      setBroadcasts(bcRes.broadcasts);
       setSelectedVehicleId((prev) =>
         prev && vehRes.vehicles.some((v) => v.id === prev)
           ? prev
@@ -149,9 +208,68 @@ export const App: React.FC = () => {
     if (!owner) return;
     const interval = window.setInterval(() => {
       void loadAll();
-    }, 5000);
+    }, 10000);
     return () => window.clearInterval(interval);
   }, [loadAll, owner]);
+
+  // Stream SSE en tiempo real + alerta sonora en eventos críticos
+  useEffect(() => {
+    if (!owner) return;
+    const unsubscribe = subscribeAdminStream((msg) => {
+      if (msg.type === "position" && msg.vehicleId && msg.data) {
+        setVehicles((prev) =>
+          prev.map((v) =>
+            v.id === msg.vehicleId
+              ? {
+                  ...v,
+                  online: true,
+                  lastLat: msg.data.lat,
+                  lastLon: msg.data.lon,
+                  lastSpeedKmh: msg.data.speedKmh,
+                  lastCourse: msg.data.course,
+                  accOn: msg.data.accOn,
+                  relayState: msg.data.relayState ?? v.relayState,
+                  driverScore: msg.data.driverScore ?? v.driverScore,
+                }
+              : v
+          )
+        );
+      } else if (msg.type === "relay_update" && msg.vehicleId && msg.data) {
+        setVehicles((prev) =>
+          prev.map((v) =>
+            v.id === msg.vehicleId
+              ? { ...v, relayState: msg.data.relayState }
+              : v
+          )
+        );
+      } else if (msg.type === "device_online" && msg.vehicleId) {
+        setVehicles((prev) =>
+          prev.map((v) =>
+            v.id === msg.vehicleId ? { ...v, online: true } : v
+          )
+        );
+      } else if (msg.type === "device_offline" && msg.vehicleId) {
+        setVehicles((prev) =>
+          prev.map((v) =>
+            v.id === msg.vehicleId ? { ...v, online: false } : v
+          )
+        );
+      } else if (
+        msg.type === "alarm_sos" ||
+        msg.type === "towing_alert" ||
+        msg.type === "jammer_suspected"
+      ) {
+        playCriticalAlertBeep();
+        setDataErr(
+          `ALERTA CRÍTICA (${msg.type.toUpperCase()}) • Unidad ${
+            msg.data?.alias ?? msg.imei ?? ""
+          }`
+        );
+        void loadAll();
+      }
+    });
+    return unsubscribe;
+  }, [owner, loadAll]);
 
   const handleLogout = () => {
     setAdminToken(null);
@@ -160,8 +278,14 @@ export const App: React.FC = () => {
   };
 
   const notify = (msg: string) => {
+    setDataErr(null);
     setFeedback(msg);
-    window.setTimeout(() => setFeedback(null), 3200);
+    window.setTimeout(() => setFeedback(null), 3500);
+  };
+
+  const showError = (msg: string) => {
+    setFeedback(null);
+    setDataErr(msg);
   };
 
   const handleReviewDoc = async (
@@ -173,7 +297,7 @@ export const App: React.FC = () => {
       notify(`Documento marcado como ${decision}.`);
       await loadAll();
     } catch (err) {
-      setDataErr(err instanceof Error ? err.message : "Error actualizando");
+      showError(err instanceof Error ? err.message : "Error actualizando");
     }
   };
 
@@ -186,7 +310,7 @@ export const App: React.FC = () => {
       notify(`Estado de cuenta actualizado a ${nextStatus}.`);
       await loadAll();
     } catch (err) {
-      setDataErr(err instanceof Error ? err.message : "Error actualizando");
+      showError(err instanceof Error ? err.message : "Error actualizando");
     }
   };
 
@@ -201,7 +325,7 @@ export const App: React.FC = () => {
       await loadAll();
       return true;
     } catch (err) {
-      setDataErr(
+      showError(
         err instanceof Error ? err.message : "Error enviando comando"
       );
       return false;
@@ -218,7 +342,7 @@ export const App: React.FC = () => {
       notify(`Incidente actualizado a ${status}.`);
       await loadAll();
     } catch (err) {
-      setDataErr(
+      showError(
         err instanceof Error ? err.message : "Error actualizando incidente"
       );
     }
@@ -239,7 +363,7 @@ export const App: React.FC = () => {
       await loadAll();
       return true;
     } catch (err) {
-      setDataErr(err instanceof Error ? err.message : "Error guardando plan");
+      showError(err instanceof Error ? err.message : "Error guardando plan");
       return false;
     }
   };
@@ -436,7 +560,7 @@ export const App: React.FC = () => {
               <div>
                 <strong>WARDEN SOC</strong>
                 <span className="hud-live mono">
-                  <span className="live-dot" /> AUTO 5s &bull;{" "}
+                  <span className="live-dot" /> SSE LIVE &bull;{" "}
                   {lastSyncedAt || "--:--"}
                 </span>
               </div>
@@ -491,10 +615,20 @@ export const App: React.FC = () => {
             <button
               type="button"
               className="hud-kpi"
-              onClick={() => selectTab("leads")}
+              onClick={() => selectTab("hardware")}
             >
-              <span className="hud-kpi-lbl">LEADS</span>
-              <strong className="mono">{leads.length}</strong>
+              <span className="hud-kpi-lbl">SILENCIOSOS</span>
+              <strong
+                className="mono"
+                style={{
+                  color:
+                    (health?.silentVehiclesCount ?? 0) > 0
+                      ? "#fbbf24"
+                      : undefined,
+                }}
+              >
+                {health?.silentVehiclesCount ?? 0}
+              </strong>
             </button>
           </div>
 
@@ -569,6 +703,14 @@ export const App: React.FC = () => {
             </button>
             <button
               type="button"
+              className={`rail-btn ${tab === "hardware" ? "active" : ""}`}
+              onClick={() => selectTab("hardware")}
+            >
+              <IconMap />
+              <span>Hardware</span>
+            </button>
+            <button
+              type="button"
               className={`rail-btn ${tab === "documents" ? "active" : ""}`}
               onClick={() => selectTab("documents")}
             >
@@ -593,6 +735,14 @@ export const App: React.FC = () => {
             >
               <IconLeads />
               <span>Leads</span>
+            </button>
+            <button
+              type="button"
+              className={`rail-btn ${tab === "platform" ? "active" : ""}`}
+              onClick={() => selectTab("platform")}
+            >
+              <IconDashboard />
+              <span>SaaS</span>
             </button>
             <button
               type="button"
@@ -658,12 +808,16 @@ export const App: React.FC = () => {
                   ? `Cola de Incidentes SOC (${openIncidentsCount} activos)`
                   : tab === "metrics"
                   ? `Métricas Ejecutivas • MRR $${mrrUsd.toLocaleString()} USD`
+                  : tab === "hardware"
+                  ? `Inventario GPS / SIM & Gateway (${hardwareItems.length})`
                   : tab === "documents"
                   ? `Revisión de Documentos (${filteredDocs.length})`
                   : tab === "users"
-                  ? `Cuentas y Roles (${filteredUsers.length})`
+                  ? `Cuentas, Roles & Operadores (${filteredUsers.length})`
                   : tab === "leads"
-                  ? `Leads Comerciales (${filteredLeads.length} • ${totalLeadUnits} unidades)`
+                  ? `CRM Leads Comerciales (${filteredLeads.length} • ${totalLeadUnits} unidades)`
+                  : tab === "platform"
+                  ? `Planes Globales SaaS & Broadcasts`
                   : `Auditoría Global Inmutable (${filteredAudit.length})`}
               </h2>
             </div>
@@ -686,6 +840,8 @@ export const App: React.FC = () => {
                   selectTab("soc");
                 }}
                 onUpdateIncident={handleIncidentUpdate}
+                onNotify={notify}
+                onError={showError}
               />
             )}
 
@@ -702,12 +858,23 @@ export const App: React.FC = () => {
               />
             )}
 
+            {tab === "hardware" && (
+              <HardwarePanel
+                items={hardwareItems}
+                health={health}
+                onRefresh={loadAll}
+                onNotify={notify}
+                onError={showError}
+              />
+            )}
+
             {tab === "documents" && (
               <DocumentsPanel
                 documents={filteredDocs}
                 statusFilter={statusFilter}
                 onStatusFilterChange={setStatusFilter}
                 onReview={handleReviewDoc}
+                onError={showError}
               />
             )}
 
@@ -718,12 +885,36 @@ export const App: React.FC = () => {
                 getInitials={getInitials}
                 onUpdateStatus={handleUserStatus}
                 onSavePlan={handleSavePlan}
+                onRefresh={loadAll}
+                onNotify={notify}
+                onError={showError}
               />
             )}
 
-            {tab === "leads" && <LeadsPanel leads={filteredLeads} />}
+            {tab === "leads" && (
+              <LeadsPanel
+                leads={filteredLeads}
+                onRefresh={loadAll}
+                onNotify={notify}
+                onError={showError}
+              />
+            )}
 
-            {tab === "audit" && <AuditPanel logs={filteredAudit} />}
+            {tab === "platform" && (
+              <PlatformPanel
+                plans={planCatalog}
+                broadcasts={broadcasts}
+                mrrUsd={mrrUsd}
+                activeAccountsCount={activeUsers}
+                onRefresh={loadAll}
+                onNotify={notify}
+                onError={showError}
+              />
+            )}
+
+            {tab === "audit" && (
+              <AuditPanel logs={filteredAudit} onError={showError} />
+            )}
           </div>
         </div>
       )}
